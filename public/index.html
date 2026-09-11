@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <title>NEXA AI</title>
+
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+
+  <div class="app">
+
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">N</div>
+
+        <div>
+          <h1>NEXA</h1>
+          <span>AI Assistant</span>
+        </div>
+      </div>
+
+      <button id="clearBtn" class="clear-btn">
+        Clear
+      </button>
+    </header>
+
+    <main id="chat" class="chat">
+
+      <section class="welcome">
+        <div class="welcome-logo">N</div>
+
+        <h2>Welcome to NEXA</h2>
+
+        <p>
+          Your AI assistant for questions, ideas, learning,
+          writing and everyday tasks.
+        </p>
+
+        <div class="suggestions">
+
+          <button data-prompt="Explain something interesting to me.">
+            Explain something
+          </button>
+
+          <button data-prompt="Help me learn something new today.">
+            Teach me
+          </button>
+
+          <button data-prompt="Give me some creative ideas.">
+            Creative ideas
+          </button>
+
+        </div>
+      </section>
+
+    </main>
+
+    <div class="typing" id="typing">
+      NEXA is thinking...
+    </div>
+
+    <form id="chatForm" class="input-area">
+
+      <textarea
+        id="messageInput"
+        rows="1"
+        placeholder="Message NEXA..."
+        autocomplete="off"
+      ></textarea>
+
+      <button
+        id="sendBtn"
+        type="submit"
+        aria-label="Send message"
+      >
+        ➤
+      </button>
+
+    </form>
+
+    <div class="footer">
+      NEXA can make mistakes. Check important information.
+    </div>
+
+  </div>
+
+  <script src="/js/app.js"></script>
+
+</body>
+</html>
