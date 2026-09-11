@@ -12,24 +12,20 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-if (!process.env.OPENAI_API_KEY) {
-  console.warn("OPENAI_API_KEY is not set.");
-}
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
 app.use(express.json({ limit: "1mb" }));
+
+// Serve the website
 app.use(express.static(path.join(__dirname, "public")));
 
+// Health check
 app.get("/api/health", (req, res) => {
   res.json({
-    ok: true,
-    message: "NEXA AI server is running"
+    status: "ok",
+    message: "NEXA AI is running"
   });
 });
 
+// Chat endpoint
 app.post("/api/chat", async (req, res) => {
   try {
     const { message, history = [] } = req.body;
@@ -42,25 +38,27 @@ app.post("/api/chat", async (req, res) => {
 
     if (!process.env.OPENAI_API_KEY) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is not configured on the server."
+        error: "OPENAI_API_KEY is missing from Render."
       });
     }
 
-    const safeHistory = Array.isArray(history)
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY
+    });
+
+    const previousMessages = Array.isArray(history)
       ? history
-          .filter(item =>
-            item &&
-            (item.role === "user" || item.role === "assistant") &&
-            typeof item.content === "string"
+          .filter(
+            (item) =>
+              item &&
+              (item.role === "user" || item.role === "assistant") &&
+              typeof item.content === "string"
           )
           .slice(-20)
       : [];
 
     const input = [
-      ...safeHistory.map(item => ({
-        role: item.role,
-        content: item.content
-      })),
+      ...previousMessages,
       {
         role: "user",
         content: message
@@ -69,30 +67,40 @@ app.post("/api/chat", async (req, res) => {
 
     const response = await client.responses.create({
       model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
+
       instructions:
         "You are NEXA, a helpful general-purpose AI assistant. " +
-        "Be clear, useful, honest, and age-appropriate. " +
-        "Do not provide sexual content involving minors or help users access dangerous or illegal activities.",
-      input
+        "Give clear, useful and honest answers. " +
+        "Keep responses age-appropriate. " +
+        "Do not provide sexual content involving minors or help with dangerous or illegal activities.",
+
+      input: input
     });
 
+    const reply =
+      response.output_text || "Sorry, I couldn't generate a response.";
+
     res.json({
-      reply: response.output_text || "I couldn't generate a response."
+      reply: reply
     });
 
   } catch (error) {
-    console.error("AI error:", error);
+    console.error("NEXA ERROR:", error);
 
     res.status(500).json({
-      error: "The AI request failed. Check the Render logs for details."
+      error: "NEXA could not process your request."
     });
   }
 });
 
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
+// Send all other routes to the frontend
+app.get("/{*splat}", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "public", "index.html")
+  );
 });
 
-app.listen(PORT, () => {
+// Start server
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`NEXA AI running on port ${PORT}`);
 });
