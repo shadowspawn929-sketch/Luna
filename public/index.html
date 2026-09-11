@@ -2,38 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   >
 
+  <meta
+    name="theme-color"
+    content="#0b0d12"
+  >
+
   <title>NEXA AI</title>
 
-  <link rel="stylesheet" href="/css/style.css">
+  <!-- Version number forces the browser to load the newest CSS -->
+  <link rel="stylesheet" href="/css/style.css?v=2">
 </head>
 
 <body>
 
   <div class="app">
 
+    <!-- TOP BAR -->
     <header class="topbar">
+
       <div class="brand">
+
         <div class="logo">N</div>
 
         <div>
           <h1>NEXA</h1>
           <span>AI Assistant</span>
         </div>
+
       </div>
 
-      <button id="clearBtn" class="clear-btn">
+      <button
+        id="clearBtn"
+        class="clear-btn"
+        type="button"
+      >
         Clear
       </button>
+
     </header>
 
-    <main id="chat" class="chat">
+
+    <!-- CHAT AREA -->
+    <main
+      id="chat"
+      class="chat"
+    >
 
       <section class="welcome">
+
         <div class="welcome-logo">N</div>
 
         <h2>Welcome to NEXA</h2>
@@ -45,34 +67,56 @@
 
         <div class="suggestions">
 
-          <button data-prompt="Explain something interesting to me.">
+          <button
+            type="button"
+            data-prompt="Explain something interesting to me."
+          >
             Explain something
           </button>
 
-          <button data-prompt="Help me learn something new today.">
+          <button
+            type="button"
+            data-prompt="Help me learn something new today."
+          >
             Teach me
           </button>
 
-          <button data-prompt="Give me some creative ideas.">
+          <button
+            type="button"
+            data-prompt="Give me some creative ideas."
+          >
             Creative ideas
           </button>
 
         </div>
+
       </section>
 
     </main>
 
-    <div class="typing" id="typing">
+
+    <!-- THINKING INDICATOR -->
+    <div
+      class="typing"
+      id="typing"
+    >
       NEXA is thinking...
     </div>
 
-    <form id="chatForm" class="input-area">
+
+    <!-- MESSAGE INPUT -->
+    <form
+      id="chatForm"
+      class="input-area"
+    >
 
       <textarea
         id="messageInput"
         rows="1"
         placeholder="Message NEXA..."
         autocomplete="off"
+        spellcheck="true"
+        aria-label="Message NEXA"
       ></textarea>
 
       <button
@@ -85,13 +129,17 @@
 
     </form>
 
+
+    <!-- FOOTER -->
     <div class="footer">
       NEXA can make mistakes. Check important information.
     </div>
 
   </div>
 
-  <script src="/js/app.js"></script>
+
+  <!-- Version number forces the browser to load the newest JS -->
+  <script src="/js/app.js?v=2"></script>
 
 </body>
 </html>
