@@ -17,97 +17,70 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "NEXA AI is running"
+    message: "NEXA AI Image Generator is running"
   });
 });
 
 app.post("/api/chat", async (req, res) => {
   try {
-    const { message, history = [] } = req.body;
+    const { message } = req.body;
 
     if (!message || typeof message !== "string") {
       return res.status(400).json({
-        error: "Please enter a message."
+        error: "Please enter an image prompt."
       });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is missing from Render."
+        error: "OPENAI_API_KEY is missing from Render environment."
       });
     }
 
-    const safeHistory = Array.isArray(history)
-      ? history
-          .filter(
-            item =>
-              item &&
-              (item.role === "user" || item.role === "assistant") &&
-              typeof item.content === "string"
-          )
-          .slice(-20)
-      : [];
+    // Enhance prompt automatically for anime/digital art output
+    const imagePrompt = `High quality anime digital art, vibrant colors, clean detail: ${message}`;
 
-    const input = [
-      ...safeHistory,
-      {
-        role: "user",
-        content: message
-      }
-    ];
-
-    const response = await fetch(
-      "https://api.openai.com/v1/responses",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
-        },
-
-        body: JSON.stringify({
-          model: process.env.OPENAI_MODEL || "gpt-5.6-luna",
-          instructions:
-            "You are NEXA, a helpful general-purpose AI assistant. " +
-            "Give clear, useful and honest answers. " +
-            "Keep responses age-appropriate.",
-          input
-        })
-      }
-    );
+    const response = await fetch("https://api.openai.com/v1/images/generations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: "gpt-image-1-mini",
+        prompt: imagePrompt,
+        n: 1,
+        size: "1024x1024"
+      })
+    });
 
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("OpenAI API error:", data);
-
       return res.status(response.status).json({
-        error: data?.error?.message || "OpenAI API request failed."
+        error: data?.error?.message || "Failed to generate image."
       });
     }
 
-    const reply =
-      data.output_text ||
-      "Sorry, I couldn't generate a response.";
-
-    res.json({ reply });
+    // Return the generated image URL directly
+    return res.json({
+      imageUrl: data.data[0].url
+    });
 
   } catch (error) {
-    console.error("NEXA server error:", error);
-
+    console.error("NEXA image generation error:", error);
     res.status(500).json({
-      error: "NEXA could not process your request."
+      error: "NEXA could not process your image request."
     });
   }
 });
 
 app.get("/{*splat}", (req, res) => {
-  res.sendFile(
-    path.join(__dirname, "public", "index.html")
-  );
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`NEXA AI running on port ${PORT}`);
+  console.log(`NEXA AI Image Generator running on port ${PORT}`);
 });
+        
