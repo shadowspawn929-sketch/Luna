@@ -7,6 +7,37 @@ const clearBtn = document.getElementById("clearBtn");
 
 let conversation = [];
 
+function showWelcome() {
+  chat.innerHTML = `
+    <section class="welcome">
+      <div class="welcome-logo">N</div>
+
+      <h2>Welcome to NEXA</h2>
+
+      <p>
+        Your AI assistant for questions, ideas, learning,
+        writing and everyday tasks.
+      </p>
+
+      <div class="suggestions">
+        <button data-prompt="Explain something interesting to me.">
+          Explain something
+        </button>
+
+        <button data-prompt="Help me learn something new today.">
+          Teach me
+        </button>
+
+        <button data-prompt="Give me some creative ideas.">
+          Creative ideas
+        </button>
+      </div>
+    </section>
+  `;
+
+  attachSuggestionButtons();
+}
+
 function removeWelcome() {
   const welcome = document.querySelector(".welcome");
 
@@ -32,23 +63,31 @@ function addMessage(role, text) {
   chat.scrollTop = chat.scrollHeight;
 }
 
-function setLoading(value) {
-  typing.style.display = value ? "block" : "none";
-  sendBtn.disabled = value;
-  input.disabled = value;
+function setLoading(isLoading) {
+  if (typing) {
+    typing.style.display = isLoading ? "block" : "none";
+  }
+
+  if (sendBtn) {
+    sendBtn.disabled = isLoading;
+  }
+
+  if (input) {
+    input.disabled = isLoading;
+  }
 }
 
 async function sendMessage(text) {
-
   text = text.trim();
 
   if (!text) {
     return;
   }
 
-  addMessage("user", text);
-
+  // Save the conversation before adding the new message.
   const previousConversation = [...conversation];
+
+  addMessage("user", text);
 
   conversation.push({
     role: "user",
@@ -61,7 +100,6 @@ async function sendMessage(text) {
   setLoading(true);
 
   try {
-
     const response = await fetch("/api/chat", {
       method: "POST",
 
@@ -75,13 +113,28 @@ async function sendMessage(text) {
       })
     });
 
-    const data = await response.json();
+    // Try to read JSON safely.
+    let data;
 
-    if (!response.ok) {
-      throw new Error(data.error || "Request failed.");
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(
+        `Server returned an invalid response (${response.status}).`
+      );
     }
 
-    const reply = data.reply || "I couldn't generate a response.";
+    // Show the REAL server/API error.
+    if (!response.ok) {
+      throw new Error(
+        data?.error ||
+        `Request failed with status ${response.status}.`
+      );
+    }
+
+    const reply =
+      data?.reply ||
+      "NEXA received the request but returned no response.";
 
     addMessage("assistant", reply);
 
@@ -91,104 +144,66 @@ async function sendMessage(text) {
     });
 
   } catch (error) {
-
-    console.error(error);
+    console.error("NEXA chat error:", error);
 
     addMessage(
       "assistant",
-      "Sorry, I couldn't connect to the AI server. Check your Render environment variables and logs."
+      "NEXA ERROR:\n" +
+      (error.message || "Unknown error")
     );
 
+    // Remove the failed user message from conversation history.
     conversation = previousConversation;
 
   } finally {
-
     setLoading(false);
-    input.focus();
 
+    if (input) {
+      input.focus();
+    }
   }
 }
 
 form.addEventListener("submit", async (event) => {
-
   event.preventDefault();
 
   await sendMessage(input.value);
-
 });
 
 input.addEventListener("input", () => {
-
   input.style.height = "auto";
 
   input.style.height =
     Math.min(input.scrollHeight, 150) + "px";
-
 });
 
 input.addEventListener("keydown", (event) => {
-
   if (event.key === "Enter" && !event.shiftKey) {
-
     event.preventDefault();
 
     form.requestSubmit();
-
   }
-
 });
 
 clearBtn.addEventListener("click", () => {
-
   conversation = [];
 
-  chat.innerHTML = `
-    <section class="welcome">
-      <div class="welcome-logo">N</div>
+  showWelcome();
 
-      <h2>Welcome to NEXA</h2>
-
-      <p>
-        Your AI assistant for questions, ideas, learning,
-        writing and everyday tasks.
-      </p>
-
-      <div class="suggestions">
-
-        <button data-prompt="Explain something interesting to me.">
-          Explain something
-        </button>
-
-        <button data-prompt="Help me learn something new today.">
-          Teach me
-        </button>
-
-        <button data-prompt="Give me some creative ideas.">
-          Creative ideas
-        </button>
-
-      </div>
-    </section>
-  `;
-
-  attachSuggestionButtons();
-
+  input.value = "";
+  input.style.height = "auto";
+  input.focus();
 });
 
 function attachSuggestionButtons() {
-
   document
     .querySelectorAll("[data-prompt]")
-    .forEach(button => {
-
+    .forEach((button) => {
       button.addEventListener("click", () => {
-
         sendMessage(button.dataset.prompt);
-
       });
-
     });
-
 }
 
-attachSuggestionButtons();
+// Start NEXA.
+showWelcome();
