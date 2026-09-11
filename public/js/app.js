@@ -5,8 +5,6 @@ const sendBtn = document.getElementById("sendBtn");
 const typing = document.getElementById("typing");
 const clearBtn = document.getElementById("clearBtn");
 
-let conversation = [];
-
 function showWelcome() {
   chat.innerHTML = `
     <section class="welcome">
@@ -15,21 +13,20 @@ function showWelcome() {
       <h2>Welcome to NEXA</h2>
 
       <p>
-        Your AI assistant for questions, ideas, learning,
-        writing and everyday tasks.
+        Your AI image generator. Enter a description to create visual art.
       </p>
 
       <div class="suggestions">
-        <button data-prompt="Explain something interesting to me.">
-          Explain something
+        <button data-prompt="A futuristic cyberpunk city at night with neon lights">
+          Cyberpunk City
         </button>
 
-        <button data-prompt="Help me learn something new today.">
-          Teach me
+        <button data-prompt="An anime warrior standing in a cherry blossom forest">
+          Anime Warrior
         </button>
 
-        <button data-prompt="Give me some creative ideas.">
-          Creative ideas
+        <button data-prompt="A cute mech robot operating a coffee shop">
+          Coffee Mech
         </button>
       </div>
     </section>
@@ -40,13 +37,12 @@ function showWelcome() {
 
 function removeWelcome() {
   const welcome = document.querySelector(".welcome");
-
   if (welcome) {
     welcome.remove();
   }
 }
 
-function addMessage(role, text) {
+function addMessage(role, content, isImage = false) {
   removeWelcome();
 
   const row = document.createElement("div");
@@ -55,7 +51,17 @@ function addMessage(role, text) {
   const message = document.createElement("div");
   message.className = `message ${role}`;
 
-  message.textContent = text;
+  if (isImage) {
+    const img = document.createElement("img");
+    img.src = content;
+    img.alt = "Generated AI Art";
+    img.style.maxWidth = "100%";
+    img.style.borderRadius = "10px";
+    img.style.display = "block";
+    message.appendChild(img);
+  } else {
+    message.textContent = content;
+  }
 
   row.appendChild(message);
   chat.appendChild(row);
@@ -65,6 +71,7 @@ function addMessage(role, text) {
 
 function setLoading(isLoading) {
   if (typing) {
+    typing.textContent = "NEXA is generating artwork...";
     typing.style.display = isLoading ? "block" : "none";
   }
 
@@ -84,15 +91,7 @@ async function sendMessage(text) {
     return;
   }
 
-  // Save the conversation before adding the new message.
-  const previousConversation = [...conversation];
-
   addMessage("user", text);
-
-  conversation.push({
-    role: "user",
-    content: text
-  });
 
   input.value = "";
   input.style.height = "auto";
@@ -102,20 +101,13 @@ async function sendMessage(text) {
   try {
     const response = await fetch("/api/chat", {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
-      body: JSON.stringify({
-        message: text,
-        history: previousConversation
-      })
+      body: JSON.stringify({ message: text })
     });
 
-    // Try to read JSON safely.
     let data;
-
     try {
       data = await response.json();
     } catch {
@@ -124,40 +116,26 @@ async function sendMessage(text) {
       );
     }
 
-    // Show the REAL server/API error.
     if (!response.ok) {
       throw new Error(
-        data?.error ||
-        `Request failed with status ${response.status}.`
+        data?.error || `Request failed with status ${response.status}.`
       );
     }
 
-    const reply =
-      data?.reply ||
-      "NEXA received the request but returned no response.";
-
-    addMessage("assistant", reply);
-
-    conversation.push({
-      role: "assistant",
-      content: reply
-    });
+    if (data.imageUrl) {
+      addMessage("assistant", data.imageUrl, true);
+    } else {
+      addMessage("assistant", "No image URL returned from server.");
+    }
 
   } catch (error) {
-    console.error("NEXA chat error:", error);
-
+    console.error("NEXA error:", error);
     addMessage(
       "assistant",
-      "NEXA ERROR:\n" +
-      (error.message || "Unknown error")
+      "NEXA ERROR:\n" + (error.message || "Unknown error")
     );
-
-    // Remove the failed user message from conversation history.
-    conversation = previousConversation;
-
   } finally {
     setLoading(false);
-
     if (input) {
       input.focus();
     }
@@ -166,44 +144,34 @@ async function sendMessage(text) {
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
-
   await sendMessage(input.value);
 });
 
 input.addEventListener("input", () => {
   input.style.height = "auto";
-
-  input.style.height =
-    Math.min(input.scrollHeight, 150) + "px";
+  input.style.height = Math.min(input.scrollHeight, 150) + "px";
 });
 
 input.addEventListener("keydown", (event) => {
   if (event.key === "Enter" && !event.shiftKey) {
     event.preventDefault();
-
     form.requestSubmit();
   }
 });
 
 clearBtn.addEventListener("click", () => {
-  conversation = [];
-
   showWelcome();
-
   input.value = "";
   input.style.height = "auto";
   input.focus();
 });
 
 function attachSuggestionButtons() {
-  document
-    .querySelectorAll("[data-prompt]")
-    .forEach((button) => {
-      button.addEventListener("click", () => {
-        sendMessage(button.dataset.prompt);
-      });
+  document.querySelectorAll("[data-prompt]").forEach((button) => {
+    button.addEventListener("click", () => {
+      sendMessage(button.dataset.prompt);
     });
+  });
 }
 
-// Start NEXA.
 showWelcome();
