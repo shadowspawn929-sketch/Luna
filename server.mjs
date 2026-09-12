@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "NEXA AI Free Image Generator is running"
+    message: "NEXA AI Image Generator is running"
   });
 });
 
@@ -31,55 +31,16 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const hfToken = process.env.HF_TOKEN;
-    if (!hfToken) {
-      return res.status(500).json({
-        error: "HF_TOKEN is missing in Render environment variables."
-      });
-    }
-
-    const fullPrompt = `${message}, masterpiece, best quality, highly detailed anime visual style, vibrant background`;
-
-    // Updated to the official Hugging Face Router endpoint
-    const hfUrl = "https://router.huggingface.co/hf-inference/v1/models/cagliostrolab/animagine-xl-3.1";
-
-    const response = await fetch(hfUrl, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${hfToken.trim()}`,
-        "Content-Type": "application/json",
-        "x-use-cache": "false"
-      },
-      body: JSON.stringify({
-        inputs: fullPrompt
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-
-      if (response.status === 503) {
-        return res.status(503).json({
-          error: "Model is waking up! Please try again in 20 seconds."
-        });
-      }
-
-      return res.status(response.status).json({
-        error: errorData?.error || `Hugging Face request failed with status ${response.status}`
-      });
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    const base64Image = buffer.toString("base64");
-    const imageDataUrl = `data:image/jpeg;base64,${base64Image}`;
+    // Build image stream URL with zero token requirements
+    const formattedPrompt = encodeURIComponent(`masterpiece, best quality, highly detailed anime visual style, ${message}`);
+    const imageUrl = `https://image.pollinations.ai/prompt/${formattedPrompt}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
 
     return res.json({
-      imageUrl: imageDataUrl
+      imageUrl: imageUrl
     });
 
   } catch (error) {
-    console.error("NEXA server generation error:", error);
+    console.error("NEXA generation error:", error);
     res.status(500).json({
       error: "NEXA could not process your image request."
     });
