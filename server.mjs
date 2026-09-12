@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "NEXA AI Image Generator is running"
+    message: "Alucard AI Free Image Generator is running"
   });
 });
 
@@ -31,47 +31,60 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
+    const hfToken = process.env.HF_TOKEN;
+    if (!hfToken) {
       return res.status(500).json({
-        error: "OPENAI_API_KEY is missing from Render environment."
+        error: "HF_TOKEN is missing in Render environment variables."
       });
     }
 
-    // Enhance prompt automatically for anime/digital art output
-    const imagePrompt = `High quality anime digital art, vibrant colors, clean detail: ${message}`;
+    // Master prompt tuning for detailed anime style
+    const fullPrompt = `${message}, masterpiece, best quality, highly detailed anime visual style, vibrant background`;
 
-    const response = await fetch("https://api.openai.com/v1/images/generations", {
+    // Free anime model endpoint on Hugging Face
+    const hfUrl = "https://api-inference.huggingface.co/models/cagliostrolab/animagine-xl-3.1";
+
+    const response = await fetch(hfUrl, {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${hfToken}`,
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${apiKey}`
+        "x-use-cache": "false"
       },
       body: JSON.stringify({
-        model: "gpt-image-1-mini",
-        prompt: imagePrompt,
-        n: 1,
-        size: "1024x1024"
+        inputs: fullPrompt
       })
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      // Handle model loading warm-up phase
+      if (response.status === 503) {
+        return res.status(503).json({
+          error: "Model is waking up! Please try sending your request again in 20 seconds."
+        });
+      }
+
       return res.status(response.status).json({
-        error: data?.error?.message || "Failed to generate image."
+        error: errorData?.error || "Hugging Face failed to generate image."
       });
     }
 
-    // Return the generated image URL directly
+    // Convert raw binary image buffer into a base64 Data URL for display
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const base64Image = buffer.toString("base64");
+    const imageDataUrl = `data:image/jpeg;base64,${base64Image}`;
+
     return res.json({
-      imageUrl: data.data[0].url
+      imageUrl: imageDataUrl
     });
 
   } catch (error) {
-    console.error("NEXA image generation error:", error);
+    console.error("Alucard generation error:", error);
     res.status(500).json({
-      error: "NEXA could not process your image request."
+      error: "Alucard could not process your image request."
     });
   }
 });
@@ -81,6 +94,5 @@ app.get("/{*splat}", (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`NEXA AI Image Generator running on port ${PORT}`);
+  console.log(`Alucard AI Image Generator running on port ${PORT}`);
 });
-        
