@@ -17,7 +17,7 @@ app.use(express.static(path.join(__dirname, "public")));
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
-    message: "Alucard AI Free Image Generator is running"
+    message: "NEXA AI Free Image Generator is running"
   });
 });
 
@@ -38,16 +38,15 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // Master prompt tuning for detailed anime style
     const fullPrompt = `${message}, masterpiece, best quality, highly detailed anime visual style, vibrant background`;
 
-    // Free anime model endpoint on Hugging Face
-    const hfUrl = "https://api-inference.huggingface.co/models/cagliostrolab/animagine-xl-3.1";
+    // Updated to the official Hugging Face Router endpoint
+    const hfUrl = "https://router.huggingface.co/hf-inference/v1/models/cagliostrolab/animagine-xl-3.1";
 
     const response = await fetch(hfUrl, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${hfToken}`,
+        "Authorization": `Bearer ${hfToken.trim()}`,
         "Content-Type": "application/json",
         "x-use-cache": "false"
       },
@@ -58,20 +57,18 @@ app.post("/api/chat", async (req, res) => {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      
-      // Handle model loading warm-up phase
+
       if (response.status === 503) {
         return res.status(503).json({
-          error: "Model is waking up! Please try sending your request again in 20 seconds."
+          error: "Model is waking up! Please try again in 20 seconds."
         });
       }
 
       return res.status(response.status).json({
-        error: errorData?.error || "Hugging Face failed to generate image."
+        error: errorData?.error || `Hugging Face request failed with status ${response.status}`
       });
     }
 
-    // Convert raw binary image buffer into a base64 Data URL for display
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     const base64Image = buffer.toString("base64");
@@ -82,9 +79,9 @@ app.post("/api/chat", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Alucard generation error:", error);
+    console.error("NEXA server generation error:", error);
     res.status(500).json({
-      error: "Alucard could not process your image request."
+      error: "NEXA could not process your image request."
     });
   }
 });
@@ -94,5 +91,5 @@ app.get("/{*splat}", (req, res) => {
 });
 
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Alucard AI Image Generator running on port ${PORT}`);
+  console.log(`NEXA AI Image Generator running on port ${PORT}`);
 });
