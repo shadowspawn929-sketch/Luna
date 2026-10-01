@@ -12,7 +12,6 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Gemini
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
@@ -20,7 +19,6 @@ const ai = new GoogleGenAI({
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Health check
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -28,7 +26,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Image generation
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -53,35 +50,31 @@ app.post("/api/chat", async (req, res) => {
       }
     });
 
-    let imageData = null;
+    const parts = response.candidates?.[0]?.content?.parts || [];
 
-    for (const part of response.candidates?.[0]?.content?.parts || []) {
-      if (part.inlineData) {
-        imageData = part.inlineData.data;
-        break;
+    for (const part of parts) {
+      if (part.inlineData?.data) {
+        return res.json({
+          imageUrl: `data:${part.inlineData.mimeType || "image/png"};base64,${part.inlineData.data}`
+        });
       }
     }
 
-    if (!imageData) {
-      return res.status(500).json({
-        error: "Gemini did not return an image."
-      });
-    }
+    console.error("Gemini response contained no image:", response);
 
-    return res.json({
-      imageUrl: `data:image/png;base64,${imageData}`
+    return res.status(500).json({
+      error: "Gemini did not return an image."
     });
 
   } catch (error) {
-    console.error("NEXA Gemini image error:", error);
+    console.error("NEXA Gemini error:", error);
 
     return res.status(500).json({
-      error: "NEXA could not generate the image."
+      error: error?.message || "NEXA could not generate the image."
     });
   }
 });
 
-// Serve NEXA website
 app.get("/{*splat}", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
