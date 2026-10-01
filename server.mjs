@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -11,9 +12,15 @@ const PORT = process.env.PORT || 3000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Gemini
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
+});
+
 app.use(express.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
+// Health check
 app.get("/api/health", (req, res) => {
   res.json({
     status: "ok",
@@ -21,6 +28,7 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// Image generation
 app.post("/api/chat", async (req, res) => {
   try {
     const { message } = req.body;
@@ -31,22 +39,49 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // Build image stream URL with zero token requirements
-    const formattedPrompt = encodeURIComponent(`masterpiece, best quality, highly detailed anime visual style, ${message}`);
-    const imageUrl = `https://image.pollinations.ai/prompt/${formattedPrompt}?width=1024&height=1024&nologo=true&seed=${Math.floor(Math.random() * 1000000)}`;
+    const response = await ai.models.generateContent({
+      model: "gemini-3.1-flash-image",
+      contents: message,
+      config: {
+        responseModalities: ["IMAGE"],
+        responseFormat: {
+          image: {
+            aspectRatio: "1:1",
+            imageSize: "1K"
+          }
+        }
+      }
+    });
+
+    let imageData = null;
+
+    for (const part of response.candidates?.[0]?.content?.parts || []) {
+      if (part.inlineData) {
+        imageData = part.inlineData.data;
+        break;
+      }
+    }
+
+    if (!imageData) {
+      return res.status(500).json({
+        error: "Gemini did not return an image."
+      });
+    }
 
     return res.json({
-      imageUrl: imageUrl
+      imageUrl: `data:image/png;base64,${imageData}`
     });
 
   } catch (error) {
-    console.error("NEXA generation error:", error);
-    res.status(500).json({
-      error: "NEXA could not process your image request."
+    console.error("NEXA Gemini image error:", error);
+
+    return res.status(500).json({
+      error: "NEXA could not generate the image."
     });
   }
 });
 
+// Serve NEXA website
 app.get("/{*splat}", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
